@@ -5,6 +5,8 @@ RUN \
     apt-get update \
     && apt-get install -y --no-install-recommends \
         unzip awscli jq \
+        # for opencv
+        libgl1-mesa-glx libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
 # Install docker for deployment
