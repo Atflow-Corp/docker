@@ -1,5 +1,7 @@
-FROM python:3.13-bullseye
-LABEL org.opencontainers.image.source https://github.com/Atflow-Corp/docker
+ARG PYTHON_VERSION=3.13
+ARG PYTHON_VARIANT=bullseye
+FROM python:${PYTHON_VERSION}-${PYTHON_VARIANT}
+LABEL org.opencontainers.image.source="https://github.com/Atflow-Corp/docker"
 
 RUN \
     apt-get update \
