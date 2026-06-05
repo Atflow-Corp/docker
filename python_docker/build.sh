@@ -1,17 +1,85 @@
 #!/bin/bash
 
-name_tag="python_docker:3.13"
+set -euo pipefail
 
-docker buildx build --platform linux/amd64 -t atflow-corp/$name_tag .
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+IMAGE_NAME="python_docker"
+BUILDX_BUILDER="${BUILDX_BUILDER:-atflow-multiarch}"
+
+if (($#)); then
+  versions=("$@")
+else
+  read -r -a versions <<< "${PYTHON_VERSIONS:-3.11 3.12 3.13 3.14}"
+fi
+
+default_variant() {
+  case "$1" in
+    3.11|3.12|3.13) echo "bullseye" ;;
+    3.14) echo "bookworm" ;;
+    *) echo "bookworm" ;;
+  esac
+}
+
+default_platforms() {
+  case "$1" in
+    3.12|3.13|3.14) echo "linux/amd64,linux/arm64" ;;
+    *) echo "linux/amd64" ;;
+  esac
+}
+
+ensure_builder() {
+  if ! docker buildx inspect "$BUILDX_BUILDER" >/dev/null 2>&1; then
+    docker buildx create --name "$BUILDX_BUILDER" --driver docker-container >/dev/null
+  fi
+
+  docker buildx inspect --bootstrap "$BUILDX_BUILDER" >/dev/null
+}
 
 # CR_USER: github user id
 # CR_PAT: https://docs.github.com/en/free-pro-team@latest/packages/managing-container-images-with-github-container-registry/pushing-and-pulling-docker-images#authenticating-to-github-container-registry
-if [[ $CR_USER ]] && [[ $CR_PAT ]]
+if [[ ${CR_USER:-} ]] && [[ ${CR_PAT:-} ]]
 then
-  docker tag atflow-corp/$name_tag ghcr.io/atflow-corp/docker/$name_tag
-  echo $CR_PAT | docker login ghcr.io -u $CR_USER --password-stdin
-  docker push ghcr.io/atflow-corp/docker/$name_tag
+  echo "$CR_PAT" | docker login ghcr.io -u "$CR_USER" --password-stdin
+  ensure_builder
 else
-  echo "CR_USER, CR_PAT environment variables required!"
+  echo "CR_USER, CR_PAT environment variables not set; images will be built but not pushed."
 fi
 
+for version in "${versions[@]}"; do
+  name_tag="${IMAGE_NAME}:${version}"
+  local_tag="atflow-corp/${name_tag}"
+  remote_tag="ghcr.io/atflow-corp/docker/${name_tag}"
+  python_variant="${PYTHON_VARIANT:-$(default_variant "$version")}"
+  platforms="${PLATFORM:-$(default_platforms "$version")}"
+
+  echo "Building $name_tag from python:${version}-${python_variant} for $platforms"
+
+  if [[ ${CR_USER:-} ]] && [[ ${CR_PAT:-} ]]
+  then
+    docker buildx build \
+      --builder "$BUILDX_BUILDER" \
+      --platform "$platforms" \
+      --build-arg "PYTHON_VERSION=$version" \
+      --build-arg "PYTHON_VARIANT=$python_variant" \
+      --push \
+      -t "$remote_tag" \
+      "$SCRIPT_DIR"
+  else
+    IFS=',' read -r -a platform_list <<< "$platforms"
+
+    for platform in "${platform_list[@]}"; do
+      platform_tag="$local_tag"
+      if [[ "$platform" != "linux/amd64" ]]; then
+        platform_tag="${local_tag}-${platform//\//-}"
+      fi
+
+      docker buildx build \
+        --platform "$platform" \
+        --build-arg "PYTHON_VERSION=$version" \
+        --build-arg "PYTHON_VARIANT=$python_variant" \
+        --load \
+        -t "$platform_tag" \
+        "$SCRIPT_DIR"
+    done
+  fi
+done
