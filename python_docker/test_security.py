@@ -1,11 +1,7 @@
 """Run inside a built image: python /tests/test_security.py."""
 
-import ensurepip
 import hashlib
 import ssl
-import subprocess
-import sys
-import tempfile
 import unittest
 from importlib.metadata import version
 from pathlib import Path
@@ -23,10 +19,8 @@ DISTRUSTED_ROOTS = {
 
 
 class ImageSecurityTests(unittest.TestCase):
-    def test_global_and_bundled_pip_are_patched(self):
-        for name, installed in [("global", version("pip")), ("ensurepip", ensurepip.version())]:
-            with self.subTest(name=name):
-                self.assertGreaterEqual(Version(installed), Version("26.2.2"))
+    def test_global_pip_is_patched(self):
+        self.assertGreaterEqual(Version(version("pip")), Version("26.2.2"))
 
     def test_trust_stores_exclude_compromised_roots(self):
         paths = {Path("/etc/ssl/certs/ca-certificates.crt"), Path(certifi.where())}
@@ -40,20 +34,6 @@ class ImageSecurityTests(unittest.TestCase):
                     hashlib.sha256(cert).hexdigest() for cert in context.get_ca_certs(binary_form=True)
                 }
                 self.assertFalse(fingerprints & DISTRUSTED_ROOTS)
-
-    def test_new_venv_bootstraps_patched_pip_offline(self):
-        with tempfile.TemporaryDirectory() as directory:
-            subprocess.run([sys.executable, "-m", "venv", directory], check=True, capture_output=True)
-            subprocess.run(
-                [
-                    str(Path(directory) / "bin/python"),
-                    "-c",
-                    "from importlib.metadata import version; "
-                    "from pip._vendor.packaging.version import Version; "
-                    "assert Version(version('pip')) >= Version('26.2.2'), version('pip')",
-                ],
-                check=True,
-            )
 
 
 if __name__ == "__main__":

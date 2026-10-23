@@ -40,21 +40,20 @@ Bookworm 전환으로 glibc는 2.36 계열, Debian의 `awscli` 패키지는 v2�
 
 ## eMudhra 인증서 대응
 
-- pip 26.2.2 wheel을 SHA-256으로 검증한 뒤 전역 pip와 `ensurepip` 번들에
-  동일하게 사용합니다. 새 `python -m venv`도 네트워크 없이 수정된 pip를 설치합니다.
-  CPython의 `ensurepip` 내부 버전 상수를 수정하므로, 번들 구조가 바뀌면 빌드를
-  실패시키고 확인하도록 했습니다.
+- pip 26.2.2 wheel을 SHA-256으로 검증해 전역 pip를 업데이트합니다.
 - OS `ca-certificates`를 갱신하고 `emSign ECC Root CA - G3`와
   `AAA Certificate Services`를 비활성화합니다. pip는 자체 certifi 외에 OS
   인증서도 신뢰하므로 두 저장소를 함께 처리해야 합니다.
 - Debian AWS CLI의 botocore 인증서 번들도 OS 저장소에 연결합니다. 별도 번들에
   남아 있는 `AAA Certificate Services`를 통한 우회 신뢰를 차단합니다.
 - `test_security.py`는 OS 번들·인증서 디렉터리·pip·Debian Python 패키지 번들에서
-  문제의 루트 인증서가 없는지와 전역 pip·새 venv의 pip 버전을 오프라인으로 확인합니다.
+  문제의 루트 인증서가 없는지와 전역 pip 버전을 오프라인으로 확인합니다.
 
 이 이미지는 uv나 애플리케이션용 certifi를 설치하지 않습니다. 사용처에서
 `uv>=0.13.4`, `certifi>=2026.10.19`를 적용하고, 이전 venv를 복원하는 캐시도
-갱신해야 합니다. 이미 존재하는 venv의 pip는 별도로 업데이트해야 합니다.
+갱신해야 합니다. 새 venv와 기존 venv의 pip 업데이트는 각 사용처 프로젝트에서
+관리합니다. `python -m venv`는 CPython에 번들된 pip를 설치하므로 전역 pip
+업데이트가 새 venv에 자동으로 반영되지는 않습니다.
 
 근거: [Python 보안팀 공지](https://discuss.python.org/t/information-for-python-users-regarding-emudhra-emsign-ca-certificate-security-incident/109576),
 [인증서 사고 대응 안내](https://emudhra.we-have-a-problem.com/),
