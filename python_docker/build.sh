@@ -12,14 +12,6 @@ else
   read -r -a versions <<< "${PYTHON_VERSIONS:-3.11 3.12 3.13 3.14}"
 fi
 
-default_variant() {
-  case "$1" in
-    3.11|3.12|3.13) echo "bullseye" ;;
-    3.14) echo "bookworm" ;;
-    *) echo "bookworm" ;;
-  esac
-}
-
 default_platforms() {
   case "$1" in
     3.12|3.13|3.14) echo "linux/amd64,linux/arm64" ;;
@@ -49,7 +41,7 @@ for version in "${versions[@]}"; do
   name_tag="${IMAGE_NAME}:${version}"
   local_tag="atflow-corp/${name_tag}"
   remote_tag="ghcr.io/atflow-corp/docker/${name_tag}"
-  python_variant="${PYTHON_VARIANT:-$(default_variant "$version")}"
+  python_variant="${PYTHON_VARIANT:-bookworm}"
   platforms="${PLATFORM:-$(default_platforms "$version")}"
 
   echo "Building $name_tag from python:${version}-${python_variant} for $platforms"
@@ -58,6 +50,7 @@ for version in "${versions[@]}"; do
   then
     docker buildx build \
       --builder "$BUILDX_BUILDER" \
+      --pull \
       --platform "$platforms" \
       --build-arg "PYTHON_VERSION=$version" \
       --build-arg "PYTHON_VARIANT=$python_variant" \
@@ -74,6 +67,7 @@ for version in "${versions[@]}"; do
       fi
 
       docker buildx build \
+        --pull \
         --platform "$platform" \
         --build-arg "PYTHON_VERSION=$version" \
         --build-arg "PYTHON_VARIANT=$python_variant" \
