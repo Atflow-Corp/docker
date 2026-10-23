@@ -12,17 +12,11 @@ else
   read -r -a versions <<< "${PYTHON_VERSIONS:-3.13 3.14 3.15}"
 fi
 
-base_version() {
-  case "$1" in
-    3.13) echo "3.13.17" ;;
-    3.14) echo "3.14.9" ;;
-    3.15) echo "3.15.1" ;;
-    *) echo "Unsupported Python version: $1. Use 3.13, 3.14 or 3.15." >&2; return 1 ;;
-  esac
-}
-
 for version in "${versions[@]}"; do
-  base_version "$version" >/dev/null
+  case "$version" in
+    3.13|3.14|3.15) ;;
+    *) echo "Unsupported Python version: $version. Use 3.13, 3.14 or 3.15." >&2; exit 1 ;;
+  esac
 done
 
 ensure_builder() {
@@ -47,11 +41,10 @@ for version in "${versions[@]}"; do
   name_tag="${IMAGE_NAME}:${version}"
   local_tag="atflow-corp/${name_tag}"
   remote_tag="ghcr.io/atflow-corp/docker/${name_tag}"
-  python_version="$(base_version "$version")"
   python_variant="${PYTHON_VARIANT:-bookworm}"
   platforms="${PLATFORM:-linux/amd64,linux/arm64}"
 
-  echo "Building $name_tag from python:${python_version}-${python_variant} for $platforms"
+  echo "Building $name_tag from python:${version}-${python_variant} for $platforms"
 
   if [[ ${CR_USER:-} ]] && [[ ${CR_PAT:-} ]]
   then
@@ -60,7 +53,7 @@ for version in "${versions[@]}"; do
       --pull \
       --no-cache \
       --platform "$platforms" \
-      --build-arg "PYTHON_VERSION=$python_version" \
+      --build-arg "PYTHON_VERSION=$version" \
       --build-arg "PYTHON_VARIANT=$python_variant" \
       --push \
       -t "$remote_tag" \
@@ -78,7 +71,7 @@ for version in "${versions[@]}"; do
         --pull \
         --no-cache \
         --platform "$platform" \
-        --build-arg "PYTHON_VERSION=$python_version" \
+        --build-arg "PYTHON_VERSION=$version" \
         --build-arg "PYTHON_VARIANT=$python_variant" \
         --load \
         -t "$platform_tag" \

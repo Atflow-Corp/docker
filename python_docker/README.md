@@ -1,13 +1,16 @@
 # 공통 Python 이미지
 
-Python 3.13–3.15 이미지는 Debian Bookworm과 다음 보안 패치 버전을 사용합니다.
+Python 3.13–3.15 이미지는 Debian Bookworm과 각 계열의 최신 패치 버전을 사용합니다.
+아래 보안 릴리스가 최소 버전이며, 그보다 오래된 베이스는 빌드 중 거부합니다.
 
-- `python_docker:3.13` → `python:3.13.17-bookworm`
-- `python_docker:3.14` → `python:3.14.9-bookworm`
-- `python_docker:3.15` → `python:3.15.1-bookworm`
+- `python_docker:3.13` → `python:3.13-bookworm` (최소 3.13.17)
+- `python_docker:3.14` → `python:3.14-bookworm` (최소 3.14.9)
+- `python_docker:3.15` → `python:3.15-bookworm` (최소 3.15.1)
 
-세 버전 모두 수정된 pip 26.2.2와 certifi 2026.10.19를 번들합니다.
-Dockerfile의 기본값은 3.13.17이며, `PYTHON_VARIANT`로 배포판을 지정할 수 있습니다.
+새 패치 버전이 나오면 `build.sh`를 다시 실행해 반영합니다. 새 마이너 계열은
+빌드 대상과 최소 버전을 명시적으로 추가합니다.
+보안 기준은 pip 26.2.2 이상과 certifi 2026.10.19 이상입니다.
+Dockerfile의 기본 계열은 3.13이며, `PYTHON_VARIANT`로 배포판을 지정할 수 있습니다.
 보안 검증 대상 배포판은 Bookworm입니다.
 3.11·3.12는 빌드 대상에서 제외했습니다. 기존 GHCR 태그는 갱신하지 않으며,
 사용처의 Python 버전 전환은 각 프로젝트에서 진행합니다.
@@ -48,7 +51,7 @@ Bookworm 전환으로 glibc는 2.36 계열, Debian의 `awscli` 패키지는 v2�
 
 ## eMudhra 인증서 대응
 
-- 수정된 pip를 번들한 Python 보안 릴리스를 베이스로 사용합니다. 전역 pip와
+- 수정된 pip를 번들한 Python 보안 릴리스 이상을 베이스로 사용합니다. 전역 pip와
   새 venv가 같은 수정본을 사용하며, 별도 pip 설치나 CPython 내부 수정은 필요하지 않습니다.
 - OS `ca-certificates`는 Debian 보안 업데이트로 갱신합니다. Bookworm의
   수정 버전은 `20250419~deb12u2`이며, 두 문제 루트 인증서를 제거하므로 수동 차단은 필요하지 않습니다.
