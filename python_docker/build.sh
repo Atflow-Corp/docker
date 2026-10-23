@@ -9,15 +9,15 @@ BUILDX_BUILDER="${BUILDX_BUILDER:-atflow-multiarch}"
 if (($#)); then
   versions=("$@")
 else
-  read -r -a versions <<< "${PYTHON_VERSIONS:-3.11 3.12 3.13 3.14}"
+  read -r -a versions <<< "${PYTHON_VERSIONS:-3.13 3.14 3.15}"
 fi
 
-default_platforms() {
-  case "$1" in
-    3.12|3.13|3.14) echo "linux/amd64,linux/arm64" ;;
-    *) echo "linux/amd64" ;;
+for version in "${versions[@]}"; do
+  case "$version" in
+    3.13|3.14|3.15) ;;
+    *) echo "Unsupported Python version: $version. Use 3.13, 3.14 or 3.15." >&2; exit 1 ;;
   esac
-}
+done
 
 ensure_builder() {
   if ! docker buildx inspect "$BUILDX_BUILDER" >/dev/null 2>&1; then
@@ -42,7 +42,7 @@ for version in "${versions[@]}"; do
   local_tag="atflow-corp/${name_tag}"
   remote_tag="ghcr.io/atflow-corp/docker/${name_tag}"
   python_variant="${PYTHON_VARIANT:-bookworm}"
-  platforms="${PLATFORM:-$(default_platforms "$version")}"
+  platforms="${PLATFORM:-linux/amd64,linux/arm64}"
 
   echo "Building $name_tag from python:${version}-${python_variant} for $platforms"
 
@@ -51,6 +51,7 @@ for version in "${versions[@]}"; do
     docker buildx build \
       --builder "$BUILDX_BUILDER" \
       --pull \
+      --no-cache \
       --platform "$platforms" \
       --build-arg "PYTHON_VERSION=$version" \
       --build-arg "PYTHON_VARIANT=$python_variant" \
@@ -68,6 +69,7 @@ for version in "${versions[@]}"; do
 
       docker buildx build \
         --pull \
+        --no-cache \
         --platform "$platform" \
         --build-arg "PYTHON_VERSION=$version" \
         --build-arg "PYTHON_VARIANT=$python_variant" \

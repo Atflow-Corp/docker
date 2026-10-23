@@ -1,5 +1,6 @@
 """Run inside a built image: python /tests/test_security.py."""
 
+import ensurepip
 import hashlib
 import ssl
 import unittest
@@ -21,6 +22,9 @@ DISTRUSTED_ROOTS = {
 class ImageSecurityTests(unittest.TestCase):
     def test_global_pip_is_patched(self):
         self.assertGreaterEqual(Version(version("pip")), Version("26.2.2"))
+
+    def test_bundled_pip_is_patched(self):
+        self.assertGreaterEqual(Version(ensurepip.version()), Version("26.2.2"))
 
     def test_trust_stores_exclude_compromised_roots(self):
         paths = {Path("/etc/ssl/certs/ca-certificates.crt"), Path(certifi.where())}
